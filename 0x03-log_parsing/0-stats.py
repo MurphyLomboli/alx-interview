@@ -1,46 +1,52 @@
 #!/usr/bin/python3
-""" script that reads stdin line by line and computes metrics """
+"""Log parsing"""
+import sys
+import re
 
-from sys import stdin
 
-# init vaariables
-total_file_size = 0
-status_code_count_map = {}
+def print_stats(size, status_codes):
+    """ prints the statistics """
+
+    print("File size: {}".format(size))
+    for key in sorted(status_codes.keys()):
+        if status_codes[key] != 0:
+            print("{}: {}".format(key, status_codes[key]))
+
+
+pattern = (
+    r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\s-\s\['
+    r'\d{2}/[A-Za-z]{3}/\d{4}:\d{2}:\d{2}:\d{2}\s\+\d{4}\]'
+    r'\s"GET\s/projects/260\sHTTP/1\.1"\s\d{3}\s\d+$'
+)
+
+size = 0
+status_codes = {
+    '200': 0,
+    '301': 0,
+    '400': 0,
+    '401': 0,
+    '403': 0,
+    '404': 0,
+    '405': 0,
+    '500': 0
+}
+counter = 0
 
 try:
-    # loop through the lines from the keyboard input
-    for line_no, line in enumerate(stdin, start=1):
+    for line in sys.stdin:
+        # if re.match(pattern, line) is None:
+        #     continue
         line = line.strip()
-
-        # tokenize the line read
-        line_token: list = line.split()
-        # print(line_token)  # for debug
-        # print(len(line_token))
-        if len(line_token) != 9:
-            continue
-
-        # destructure the tokenized line
-        ip_address, _, _, _, _, _, request, status_code, file_size = line_token
-
+        line = line.split()
+        size += int(line[-1])
         try:
-            status_code = int(status_code)
-        except ValueError:
-            continue
-
-        total_file_size += int(file_size)
-
-        if status_code in status_code_count_map:
-            status_code_count_map[status_code] += 1
-        else:
-            status_code_count_map[status_code] = 1
-
-        if line_no % 10 == 0:
-            print(f"File size: {total_file_size}")
-            for code in sorted(status_code_count_map.keys()):
-                print(f"{code}: {status_code_count_map[code]}")
-
-except KeyboardInterrupt as err:
-    print(f"File size: {total_file_size}")
-    for code in sorted(status_code_count_map.keys()):
-        print(f"{code}: {status_code_count_map[code]}")
-    print(err)
+            status_codes[line[-2]] += 1
+        except KeyError:
+            pass
+        counter += 1
+        if counter == 10:
+            print_stats(size, status_codes)
+            counter = 0
+except KeyboardInterrupt:
+    print_stats(size, status_codes)
+    raise
