@@ -1,52 +1,40 @@
 #!/usr/bin/python3
-"""Log parsing"""
+"""
+Log parser
+"""
+
 import sys
-import re
+
+total_file_size = 0
+status_codes = {}
+num_of_lines = 0
+possible_status_code = [200, 301, 400, 401, 403, 404, 405, 500]
 
 
-def print_stats(size, status_codes):
-    """ prints the statistics """
+def stat():
+    print(f"File size: {total_file_size}")
+    for status, count in sorted(status_codes.items()):
+        print(f"{status}: {count}")
 
-    print("File size: {}".format(size))
-    for key in sorted(status_codes.keys()):
-        if status_codes[key] != 0:
-            print("{}: {}".format(key, status_codes[key]))
-
-
-pattern = (
-    r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\s-\s\['
-    r'\d{2}/[A-Za-z]{3}/\d{4}:\d{2}:\d{2}:\d{2}\s\+\d{4}\]'
-    r'\s"GET\s/projects/260\sHTTP/1\.1"\s\d{3}\s\d+$'
-)
-
-size = 0
-status_codes = {
-    '200': 0,
-    '301': 0,
-    '400': 0,
-    '401': 0,
-    '403': 0,
-    '404': 0,
-    '405': 0,
-    '500': 0
-}
-counter = 0
 
 try:
     for line in sys.stdin:
-        # if re.match(pattern, line) is None:
-        #     continue
-        line = line.strip()
-        line = line.split()
-        size += int(line[-1])
         try:
-            status_codes[line[-2]] += 1
-        except KeyError:
+            line = line.split()
+            file_size = int(line[-1])
+            code = int(line[-2])
+            if code in possible_status_code and isinstance(code, int):
+                total_file_size += file_size
+                num_of_lines += 1
+                if code in status_codes:
+                    status_codes[code] += 1
+                else:
+                    status_codes[code] = 1
+            if (num_of_lines % 10) == 0:
+                stat()
+        except ValueError:
             pass
-        counter += 1
-        if counter == 10:
-            print_stats(size, status_codes)
-            counter = 0
 except KeyboardInterrupt:
-    print_stats(size, status_codes)
-    raise
+    sys.exit(0)
+finally:
+    stat()
