@@ -1,123 +1,111 @@
 #!/usr/bin/python3
-""" N queens Module """
+""" N Queens puzzle solution program """
 import sys
 
 
-class Chess:
-    """ Chess object to nqueens problem
-    """
+if len(sys.argv) != 2:
+    print('Usage: nqueens N')
+    sys.exit(1)
 
-    SOLUTIONS = []
-
-    def __init__(self, N: int) -> None:
-        """ Instance method
-
-        Args:
-            N (int): Chess board size
-        """
-        self.N = N
-        # set up board
-        self.board = [[0] * self.N for _ in range(self.N)]
-
-    def is_safe(self, board, row: int, col: int, N) -> bool:
-        """ Check if queen is safe for placement
-
-        Args:
-            board (List[list]): 2D chess board
-            row (int): row inspecting
-            col (int): col inspecting
-            N (_type_): Board size
-
-        Returns:
-            bool: True if safe else false
-        """
-        # rule for checking if queens in the same row
-        for i in range(col):
-            if board[row][i] == 1:
-                return False
-
-        # rule for checking if queen is up
-        for i, j in zip(range(row, -1, -1), range(col, -1, -1)):
-            if board[i][j] == 1:
-                return False
-
-        # check if queen is down
-        for i, j in zip(range(row, N, 1), range(col, -1, -1)):
-            if board[i][j] == 1:
-                return False
-
-        return True
-
-    def find_solution(
-            self, board,
-            col: int, N: int, solutions) -> bool:
-        """ find solution for nqueens problem
-
-        Args:
-            board (List[list]): 2D chess board
-            col (int): column exploring
-            N (int): board size
-            solutions (List[list]): list of solution list
-
-        Returns:
-            bool: True if found else False
-        """
-        # found a solution meaning queens ain't attacking eachother
-        if col >= N:
-            solution = []
-            for i in range(N):
-                for j in range(N):
-                    if board[i][j] == 1:
-                        solution.append([i, j])
-            solutions.append(solution)
-            return True
-
-        res = False
-        for i in range(N):
-            # backtracking meaning go back and undo if a spot isn't safe
-            if self.is_safe(board, i, col, self.N):
-                board[i][col] = 1
-                # keep record of last valid solution if
-                # there is no point moving forward
-                res = self.find_solution(
-                    board, col + 1, self.N, solutions) or res
-                # undo temporary placement
-                board[i][col] = 0
-
-        return res
-
-    def solve_nqueens(self) -> None:
-        """ N queens method
-        """
-        # if no valid solution is found return empty list
-        if not self.find_solution(self.board, 0, self.N, Chess.SOLUTIONS):
-            return []
-
-        return Chess.SOLUTIONS
-
-
-def main() -> None:
-    """ main function
-    """
-    if len(sys.argv) != 2:
-        print("Usage: nqueens N")
+try:
+    n = int(sys.argv[1])
+    if n < 4:
+        print('N must be at least 4')
         sys.exit(1)
-
-    try:
-        N = int(sys.argv[1])
-    except ValueError:
-        print("N must be a number")
-        sys.exit(1)
-
-    if N < 4:
-        print("N must be at least 4")
-        sys.exit(1)
-
-    nqueens: Chess = Chess(N)
-    solutions = nqueens.solve_nqueens()
-    for solution in solutions:
-        print(solution)
+except ValueError:
+    print('N must be a number')
+    sys.exit(1)
 
 
-if __name__ == "__main__":
-    main()
+def check_queen_idx(row, row_num, queens_pos):
+    """ """
+    for i in range(0, len(row)):
+        invalid = False
+        if i in queens_pos:
+            continue
+        for idx, pos in enumerate(queens_pos):
+            if pos is None:
+                break
+            if abs(pos - i) == row_num - idx:
+                invalid = True
+                break
+        if invalid:
+            continue
+        return i
+    return None
+
+
+def check_possible_placement(row_num, queens_pos, index):
+    """ """
+    if index in queens_pos:
+        return False
+    for idx, pos in enumerate(queens_pos):
+        if pos is None:
+            break
+        if abs(pos - index) == row_num - idx:
+            return False
+    return True
+
+
+def backtrack(chessboard, queens_pos, current_row_num):
+    """ """
+    if queens_pos[0] == len(chessboard) - 1:
+        return (False, -1)
+    prev_row_num = current_row_num - 1
+    prev_row = chessboard[prev_row_num]
+    prev_row_queen_pos = queens_pos[prev_row_num]
+    prev_row[prev_row_queen_pos] = 0
+
+    if prev_row_num == 0:
+        prev_row[prev_row_queen_pos + 1] = 'Q'
+        queens_pos[prev_row_num] = prev_row_queen_pos + 1
+        return (True, prev_row_num)
+
+    for i in range(prev_row_queen_pos + 1, len(prev_row)):
+        if check_possible_placement(prev_row_num, queens_pos, i):
+            prev_row[i] = 'Q'
+            queens_pos[prev_row_num] = i
+            return (True, prev_row_num)
+
+    queens_pos[prev_row_num] = None
+    return backtrack(chessboard, queens_pos, prev_row_num)
+
+
+def get_queens_pos(start_idx):
+    """ """
+    chessboard = [[0 for i in range(n)] for j in range(n)]
+    queens_pos = [None for i in range(n)]
+
+    i = 0
+    while i < len(chessboard):
+        row = chessboard[i]
+        if i == 0:
+            queen_idx = start_idx
+            row[queen_idx] = 'Q'
+            queens_pos[0] = queen_idx
+            i += 1
+            continue
+        queen_idx = check_queen_idx(row, i, queens_pos)
+        if queen_idx is None:
+            done, new_idx = backtrack(chessboard, queens_pos, i)
+            if not done:
+                return None
+            else:
+                i = new_idx + 1
+                continue
+        row[queen_idx] = 'Q'
+        queens_pos[i] = queen_idx
+        i += 1
+
+    queens_pos_matrx = [[i, queens_pos[i]] for i in range(len(queens_pos))]
+    return queens_pos_matrx
+
+
+idx = 0
+while idx < n:
+    n_queens_pos = get_queens_pos(idx)
+    if n_queens_pos:
+        print(n_queens_pos)
+        idx = n_queens_pos[0][1] + 1
+    else:
+        idx += 1
